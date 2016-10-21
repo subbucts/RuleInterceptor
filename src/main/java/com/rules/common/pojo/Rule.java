@@ -1,6 +1,10 @@
 package com.rules.common.pojo;
 
 import java.util.Date;
+import java.util.Map;
+
+import com.rules.common.constants.RuleConstants;
+import com.rules.common.util.RuleUtil;
 
 /**
 * File  : Rule.java
@@ -26,6 +30,9 @@ public class Rule extends BaseVO{
 	private Date createdTime; 
 	private String modifiedBy; 
 	private Date modifiedTime; 
+	
+	private String optionalfields;
+	private Map optionalFieldsMap;
 	
 	public String getRuleName() {
 		return ruleName;
@@ -113,6 +120,23 @@ public class Rule extends BaseVO{
 	public void setModifiedTime(Date modifiedTime) {
 		this.modifiedTime = modifiedTime;
 	}
+	
+	
+	public String getOptionalfields() {
+		return optionalfields;
+	}
+	public void setOptionalfields(String optionalfields) {
+		this.optionalfields = optionalfields;
+		this.optionalFieldsMap = RuleUtil.splitToMap(optionalfields, RuleConstants.ENTRY_SEPERATOR, RuleConstants.KEY_VALUE_SEPERATOR);
+	}
+	
+	
+	public Map getOptionalFieldsMap() {
+		return optionalFieldsMap;
+	}
+	public void setOptionalFieldsMap(Map optionalFieldsMap) {
+		this.optionalFieldsMap = optionalFieldsMap;
+	}
 	@Override
 	public String toString() {
 		return "Rule [ruleId=" + ruleId + ", ruleName=" + ruleName
@@ -122,7 +146,7 @@ public class Rule extends BaseVO{
 				+ ", proceedInd=" + proceedInd + ", ruleContent=" + ruleContent
 				+ ", createdBy=" + createdBy + ", createdTime=" + createdTime
 				+ ", modifiedBy=" + modifiedBy + ", modifiedTime="
-				+ modifiedTime + "]";
+				+ modifiedTime + ", optionalfields=" + optionalfields + "]";
 	}
 
 

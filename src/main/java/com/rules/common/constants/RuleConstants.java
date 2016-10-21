@@ -28,6 +28,10 @@ public class RuleConstants {
 	public static  String PREHOOK = "PRE";
 	public static  String POSTHOOK = "POST";
 	
+	public static  String ENTRY_SEPERATOR = ";";
+	public static  String KEY_VALUE_SEPERATOR = "=";
+	public static  String FIELDS_SEPERATOR = ",";
+	
 	
 	
 }

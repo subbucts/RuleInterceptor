@@ -35,8 +35,8 @@ public class RuleMetadataPGDAO extends AbstractDAO{
 	
 	@Override
 	public boolean add(BaseVO baseVO) throws Exception {
-		String sql = "INSERT INTO rule_metadata (RULE_ID, RULE_NAME, RULE_DESCRIPTION, MICRO_SERVICE_NAME, ENABLED, PRE_POST_HOOK, EXEC_SEQ, RULE_TYPE, PROCEED_IND, CREATED_BY, CREATED_TIME, MODIFIED_BY, MODIFIED_TIME)"
-				+ "					 VALUES (nextval('public.SEQ_RM_RULE_ID'),?,?,?,?,?,?,?,?,'ADMIN',current_timestamp,'ADMIN',current_timestamp)";
+		String sql = "INSERT INTO rule_metadata (RULE_ID, RULE_NAME, RULE_DESCRIPTION, MICRO_SERVICE_NAME, ENABLED, PRE_POST_HOOK, EXEC_SEQ, RULE_TYPE, PROCEED_IND, OPTIONAL_FIELDS, CREATED_BY, CREATED_TIME, MODIFIED_BY, MODIFIED_TIME)"
+				+ "					 VALUES (nextval('public.SEQ_RM_RULE_ID'),?,?,?,?,?,?,?,?,?,'ADMIN',current_timestamp,'ADMIN',current_timestamp)";
 		PreparedStatement statement = null;
 		Rule rule = (Rule) baseVO;
 		boolean isAdded = false;
@@ -52,6 +52,7 @@ public class RuleMetadataPGDAO extends AbstractDAO{
 			statement.setInt(6, Integer.parseInt(rule.getExecSeq()));
 			statement.setString(7, rule.getRuleType());
 			statement.setString(8, rule.getProceedInd());
+			statement.setString(9, rule.getOptionalfields());
 			
 			isAdded = statement.execute();
 			getConnection().commit();
@@ -80,7 +81,7 @@ public class RuleMetadataPGDAO extends AbstractDAO{
 	@Override
 	public boolean update(BaseVO baseVO) throws Exception {
 		String sql = "UPDATE rule_metadata set RULE_NAME = ?, RULE_DESCRIPTION = ?, MICRO_SERVICE_NAME = ?, ENABLED = ?"
-				+ ", PRE_POST_HOOK = ?, EXEC_SEQ = ?, RULE_TYPE = ?, PROCEED_IND = ?, MODIFIED_BY = ?, MODIFIED_TIME = current_timestamp "
+				+ ", PRE_POST_HOOK = ?, EXEC_SEQ = ?, RULE_TYPE = ?, PROCEED_IND = ?, OPTIONAL_FIELDS = ?, MODIFIED_BY = ?, MODIFIED_TIME = current_timestamp "
 				+ "	 Where RULE_ID = ? " ;
 		PreparedStatement statement = null;
 		Rule rule = (Rule) baseVO;
@@ -97,8 +98,9 @@ public class RuleMetadataPGDAO extends AbstractDAO{
 			statement.setInt(6, Integer.parseInt(rule.getExecSeq()));
 			statement.setString(7, rule.getRuleType());
 			statement.setString(8, rule.getProceedInd());
-			statement.setString(9, rule.getModifiedBy());
-			statement.setString(10, rule.getRuleId());
+			statement.setString(9, rule.getOptionalfields());			
+			statement.setString(10, rule.getModifiedBy());
+			statement.setString(11, rule.getRuleId());
 			isUpdated = statement.executeUpdate();
 			getConnection().commit();
 			
@@ -247,6 +249,7 @@ public List<Rule> getRules(String microServiceName, String hookInd) throws Excep
 			rule.setExecSeq(rs.getString("EXEC_SEQ"));
 			rule.setRuleType(rs.getString("RULE_TYPE"));
 			rule.setProceedInd(rs.getString("PROCEED_IND"));
+			rule.setOptionalfields(rs.getString("OPTIONAL_FIELDS"));
 			rule.setCreatedBy(rs.getString("CREATED_BY"));
 			rule.setCreatedTime(rs.getDate("CREATED_TIME"));
 			rule.setModifiedBy(rs.getString("MODIFIED_BY"));
