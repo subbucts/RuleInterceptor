@@ -13,12 +13,29 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.rules.common.constants.RuleConstants;
+import com.rules.common.pojo.Rule;
+import com.rules.data.dao.postgres.RuleMetadataPGDAO;
+import com.rules.data.factory.DAOFactory;
+import com.rules.data.factory.DBFactory;
+import com.rules.exception.RuleInterceptorBaseException;
+
 /**
  * @author 595251
  *
  */
 public class RuleUtil {
 	
+	/**
+	 * To split the optional field map and set the key/value
+	 * 
+	 * @param @param source
+	 * @param @param entriesSeparator
+	 * @param @param keyValueSeparator
+	 * @param @return 
+	 * @return Map<String,String>
+	 *
+	 */
 	public static Map<String, String> splitToMap(String source, String entriesSeparator, String keyValueSeparator) {
 	    Map<String, String> map = new HashMap<String, String>();
 	    String[] entries = source.split(entriesSeparator);
@@ -66,6 +83,54 @@ public class RuleUtil {
 			list = new ArrayList(Arrays.asList(tokens));
 		return list;
 	}
+	
+	/**
+	 * returns true if any rules available for the micro service with the specified hook condition.
+	 * if no hook variable, returns all the valid rules.
+	 * 
+	 * @param @param microserviceName
+	 * @param @param hookInd
+	 * @param @return 
+	 * @return boolean
+	 *
+	 */
+	public static boolean isRulesAvailable(String microserviceName, String hookInd){
+		
+		RuleMetadataPGDAO ruleMetadataDAO;
+		try {
+			ruleMetadataDAO = (RuleMetadataPGDAO) new DAOFactory().getDAO(
+					new DBFactory().getDBService(RuleConstants.POSTGRESQL)
+					.getService(), RuleConstants.RULE_METADATA);
+			List <Rule> ruleList = null;
+			
+			if(hookInd == null || hookInd.equals(""))
+				ruleList = ruleMetadataDAO.getRules(microserviceName); 
+			else
+				ruleList = ruleMetadataDAO.getRules(microserviceName, hookInd);
+			
+			if (ruleList != null && ruleList.size() > 0)
+				return true;
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return false;
+	}
+	
+	/**
+	 * Returns true if any rules available for the micro service.
+	 * 
+	 * @param @param microserviceName
+	 * @param @return 
+	 * @return boolean
+	 *
+	 */
+	public static boolean isRulesAvailable(String microserviceName){		
+		
+		return isRulesAvailable(microserviceName, "");
+	}
+	
 	
 	
 	/*

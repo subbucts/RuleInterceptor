@@ -28,7 +28,10 @@ import com.rules.data.dao.AbstractDAO;
 public class RuleMetadataPGDAO extends AbstractDAO{
 
 	private static final Logger logger = LoggerFactory.getLogger(RuleMetadataPGDAO.class);
-	
+	/**
+	 * 
+	 * @param connection
+	 */
 	public RuleMetadataPGDAO(Connection connection){
 		super(connection);
 	}
@@ -131,6 +134,13 @@ public class RuleMetadataPGDAO extends AbstractDAO{
 		return false;
 	}
 	
+	/**
+	 * 
+	 * @param @return
+	 * @param @throws Exception 
+	 * @return List<Rule>
+	 *
+	 */
 	public List<Rule> getRules() throws Exception{
 		List ruleList = null;
 		
@@ -166,10 +176,18 @@ public class RuleMetadataPGDAO extends AbstractDAO{
 		return ruleList;
 	}
 	
+	/**
+	 * 
+	 * @param @param microServiceName
+	 * @param @return
+	 * @param @throws Exception 
+	 * @return List<Rule>
+	 *
+	 */
 	public List<Rule> getRules(String microServiceName) throws Exception{
 		
 		List ruleList = null;
-		String sql = "SELECT * FROM rule_metadata where MICRO_SERVICE_NAME = '"+microServiceName +"' and ENABLED = 'Y'"; //add order by EXEC_SEQ
+		String sql = "SELECT * FROM rule_metadata where MICRO_SERVICE_NAME = '"+microServiceName +"' and ENABLED = 'Y' order by EXEC_SEQ";  
 		Statement statement = null;
 		logger.info("RULE_METADATA - GET (MS)---> " );
 		try {
@@ -199,11 +217,20 @@ public class RuleMetadataPGDAO extends AbstractDAO{
 		return ruleList;
 	}
 	
+	/**
+	 * 
+	 * @param @param microServiceName
+	 * @param @param hookInd
+	 * @param @return
+	 * @param @throws Exception 
+	 * @return List<Rule>
+	 *
+	 */
 	
-public List<Rule> getRules(String microServiceName, String hookInd) throws Exception{
+	public List<Rule> getRules(String microServiceName, String hookInd) throws Exception{
 		
 		List ruleList = null;
-		String sql = "SELECT * FROM rule_metadata where MICRO_SERVICE_NAME = '"+microServiceName +"' and ENABLED = 'Y' " + " and PRE_POST_HOOK = '" +hookInd + "'"; //add order by EXEC_SEQ
+		String sql = "SELECT * FROM rule_metadata where MICRO_SERVICE_NAME = '"+microServiceName +"' and ENABLED = 'Y' " + " and PRE_POST_HOOK = '" +hookInd + "'  order by EXEC_SEQ"; 
 		Statement statement = null;
 		logger.info("RULE_METADATA - GET (MS, HI)---> " );
 		try {
@@ -234,7 +261,15 @@ public List<Rule> getRules(String microServiceName, String hookInd) throws Excep
 		System.out.println("RULE_METADATA - GET (MS, HI) ---> ");
 		return ruleList;
 	}
-
+ 
+   /**
+    * 
+    * @param @param rs
+    * @param @return
+    * @param @throws SQLException 
+    * @return List<Rule>
+    *
+    */
    private List <Rule> getRuleList(ResultSet rs) throws SQLException{
 	   List ruleList = new ArrayList <Rule>();
 	   Rule rule = null;
