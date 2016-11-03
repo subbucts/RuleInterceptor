@@ -7,18 +7,26 @@
 */
 package com.rules.common.util;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.message.BasicNameValuePair;
+
 import com.rules.common.constants.RuleConstants;
 import com.rules.common.pojo.Rule;
 import com.rules.data.dao.postgres.RuleMetadataPGDAO;
 import com.rules.data.factory.DAOFactory;
 import com.rules.data.factory.DBFactory;
-import com.rules.exception.RuleInterceptorBaseException;
 
 /**
  * @author 595251
@@ -132,14 +140,94 @@ public class RuleUtil {
 	}
 	
 	
-	
-	/*
-	public static void main (String arg[]){
-		
-		String value = "COUNT=3;FIELDS=A,B,C;";
-		System.out.println( " Map---> "+ splitToMap(value, ";", "="));
-		
-		System.out.println( " Fields---> "+ getList(splitToMap(value, ";", "=").get("FIELDS"), ","));
+	/**
+	 * Call pre hook rules for the given input and microservice.
+	 * 
+	 * @param @param request
+	 * @param @param microserviceName
+	 * @param @return 
+	 * @return String
+	 *
+	 */
+	public static String executePrehookRule(String request, String microserviceName) throws Exception{
+		return executeRule(request, microserviceName, RuleConstants.PREHOOK);
 	}
-	*/
+	
+	/**
+	 * Call post hook rules for the given input and microservice.
+	 * 
+	 * @param @param request
+	 * @param @param microserviceName
+	 * @param @return 
+	 * @return String
+	 *
+	 */
+	public static String executePosthookRule(String request, String microserviceName) throws Exception{
+		return executeRule(request, microserviceName, RuleConstants.POSTHOOK);
+	}
+	
+	/**
+	 * Execute rules by calling Rule Invoker microservice
+	 * 
+	 * @param @param request
+	 * @param @param microserviceName
+	 * @param @param hookInd
+	 * @param @return 
+	 * @return String
+	 *
+	 */
+	private static String executeRule(String request, String microserviceName, String hookInd) throws Exception{
+		
+		  if(!isRulesAvailable(microserviceName, hookInd))
+			  throw new Exception("No Rules Available for :"+microserviceName);
+		  
+		  HttpClient client = new DefaultHttpClient();
+		
+		  String url = getServiceURL();
+		  
+		  if (!isEmpty(hookInd) && hookInd.equalsIgnoreCase(RuleConstants.PREHOOK))
+				  url += RuleConstants.PREHOOK_REST;
+		  else
+			  	url += RuleConstants.POSTHOOK_REST;
+	  
+		  List nameValuePairs = new ArrayList(1);
+		  nameValuePairs.add(new BasicNameValuePair(RuleConstants.MS_NAME_PARAM, microserviceName));
+		  nameValuePairs.add(new BasicNameValuePair(RuleConstants.INPUT_PARAM, request));
+		  String paramsString = URLEncodedUtils.format(nameValuePairs, RuleConstants.UTF_8);
+		  HttpGet httpGet = new HttpGet(url + "?" + paramsString);
+          HttpResponse response = client.execute(httpGet);
+		  BufferedReader rd = new BufferedReader (new InputStreamReader(response.getEntity().getContent()));
+		
+		  String line = "";
+		  StringBuilder sb = new StringBuilder();
+		  while ((line = rd.readLine()) != null) {
+		
+			  	sb.append(line);
+			  	
+		  }
+		  request = sb.toString();
+		  return request;
+	
+	}
+
+	/**
+	 * get service URL from environment variable
+	 * 
+	 * @param @return 
+	 * @return String
+	 *
+	 */
+	private static String getServiceURL(){
+		
+		Map<String, String> env = System.getenv(); 
+		String url = null;
+		
+		if (env.containsKey(RuleConstants.SERVICE_URL)) 
+			url = env.get(RuleConstants.SERVICE_URL)==null? url : env.get(RuleConstants.SERVICE_URL).toString();
+			
+			
+		return url;
+	}
+
+	
 }

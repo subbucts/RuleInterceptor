@@ -27,10 +27,17 @@ public class RuleConstants {
 	
 	public static  String PREHOOK = "PRE";
 	public static  String POSTHOOK = "POST";
+	public static  String PREHOOK_REST = "prehook";
+	public static  String POSTHOOK_REST = "posthook";
+	public static  String MS_NAME_PARAM = "msName";
+	public static  String INPUT_PARAM = "input";
+	public static  String UTF_8 = "UTF-8";
 	
 	public static  String ENTRY_SEPERATOR = ";";
 	public static  String KEY_VALUE_SEPERATOR = "=";
 	public static  String FIELDS_SEPERATOR = ",";
+	public static String SERVICE_URL = "SERVICE_URL";
+	
 	
 	
 	
