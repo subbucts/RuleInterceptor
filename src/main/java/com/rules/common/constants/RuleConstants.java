@@ -10,6 +10,11 @@ package com.rules.common.constants;
 
 public class RuleConstants {
 
+	public static String ENABLED_PROCEED_Y = "Y";
+	public static String DISABLED_PROCEED_N = "N";
+	public static String EQUALS = "=";
+	public static String SEPARATOR = ";";
+	public static String HOOK_IND = "hookInd";
 	public static String POSTGRESQL = "elephantsql";
 	public static String VCAP_SERVICES = "VCAP_SERVICES";
 	public static String VCAP_USER_DEFINED = "USER_DEFINED";
@@ -37,6 +42,13 @@ public class RuleConstants {
 	public static  String KEY_VALUE_SEPERATOR = "=";
 	public static  String FIELDS_SEPERATOR = ",";
 	public static String SERVICE_URL = "SERVICE_URL";
+	
+	public static String SORT_FIELDS = "sortFields";
+	public static String SORT_ORDER = "sortOrder";
+	public static String SELECT_FIELDS = "selectFields";
+	public static String SIZE = "size";
+	public static String SEARCH_FIELD = "searchField";
+	public static String EXPRESSION = "expression";
 	
 	
 	

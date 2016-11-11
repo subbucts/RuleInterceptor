@@ -8,6 +8,8 @@
 package com.rules.common.util;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,15 +17,31 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.http.Header;
+import org.apache.http.HttpHeaders;
 import org.apache.http.HttpResponse;
+import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.utils.URLEncodedUtils;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.message.BasicNameValuePair;
 
+
+
+
+
+
+
+
+
+
+//import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
 import com.rules.common.constants.RuleConstants;
 import com.rules.common.pojo.Rule;
+import com.rules.common.pojo.RuleParams;
 import com.rules.data.dao.postgres.RuleMetadataPGDAO;
 import com.rules.data.factory.DAOFactory;
 import com.rules.data.factory.DBFactory;
@@ -102,7 +120,7 @@ public class RuleUtil {
 	 * @return boolean
 	 *
 	 */
-	public static boolean isRulesAvailable(String microserviceName, String hookInd){
+	public static boolean isDBRulesAvailable(String microserviceName, String hookInd){
 		
 		RuleMetadataPGDAO ruleMetadataDAO;
 		try {
@@ -111,10 +129,16 @@ public class RuleUtil {
 					.getService(), RuleConstants.RULE_METADATA);
 			List <Rule> ruleList = null;
 			
-			if(hookInd == null || hookInd.equals(""))
+			if(hookInd == null || hookInd.equals("")){
 				ruleList = ruleMetadataDAO.getRules(microserviceName); 
-			else
+			}else {
+				if (RuleConstants.PREHOOK.equalsIgnoreCase(hookInd) || 
+						RuleConstants.PREHOOK_REST.equalsIgnoreCase(hookInd))
+					hookInd = RuleConstants.PREHOOK;
+				else
+					hookInd = RuleConstants.POSTHOOK;
 				ruleList = ruleMetadataDAO.getRules(microserviceName, hookInd);
+			}
 			
 			if (ruleList != null && ruleList.size() > 0)
 				return true;
@@ -134,12 +158,47 @@ public class RuleUtil {
 	 * @return boolean
 	 *
 	 */
-	public static boolean isRulesAvailable(String microserviceName){		
+	public static boolean isDBRulesAvailable(String microserviceName){		
 		
-		return isRulesAvailable(microserviceName, "");
+		return isDBRulesAvailable(microserviceName, "");
+	}
+	
+	/**
+	 * Returns true if any rules available for the micro service.
+	 * 
+	 * @param @param microserviceName
+	 * @param @return 
+	 * @return boolean
+	 *
+	 */
+	public static boolean isRulesAvailable(RuleParams ruleParams){		
+		
+		if (isDBRulesAvailable(ruleParams.getMsName(), ruleParams.getHookInd()) || isQueryParamsRuleAvailable(ruleParams))
+			return true;
+		return false;
 	}
 	
 	
+	/**
+	 * @param @param ruleParams
+	 * @param @return 
+	 * @return boolean
+	 *
+	 */
+	private static boolean isQueryParamsRuleAvailable(RuleParams ruleParams) {
+		boolean isAvailable = false;
+		
+		if (RuleUtil.isEmpty(ruleParams))
+			return isAvailable;
+		//any of the below one static rule is available in the query param
+		if ( (!RuleUtil.isEmpty(ruleParams.getSearchField()) && !RuleUtil.isEmpty(ruleParams.getExpression()))
+				|| !RuleUtil.isEmpty(ruleParams.getSortFields())
+				|| !RuleUtil.isEmpty(ruleParams.getSelectFields())  
+				|| !RuleUtil.isEmpty(ruleParams.getSize()) )
+			isAvailable = true;
+		return isAvailable;
+	}
+
 	/**
 	 * Call pre hook rules for the given input and microservice.
 	 * 
@@ -154,7 +213,7 @@ public class RuleUtil {
 	}
 	
 	/**
-	 * Call post hook rules for the given input and microservice.
+	 * Call post hook rules for the given input as json string and microservice.
 	 * 
 	 * @param @param request
 	 * @param @param microserviceName
@@ -167,6 +226,138 @@ public class RuleUtil {
 	}
 	
 	/**
+	 * Call pre hook rules for the given input as java object and and microservice.
+	 * 
+	 * @param @param request
+	 * @param @param microserviceName
+	 * @param @return 
+	 * @return Object
+	 *
+	 */
+	public static Object executePrehookRule(Object requestObject, String microserviceName) throws Exception{
+		Gson gson = new Gson();
+		String request =  gson.toJson(requestObject);
+		request = executeRule(request, microserviceName, RuleConstants.PREHOOK);
+		return gson.fromJson(request, (requestObject!=null)?requestObject.getClass():Object.class);
+	}
+	
+	/**
+	 * 
+	 * Call post hook rules for the given input as java object and microservice.
+	 * 
+	 * @param @param requestObject
+	 * @param @param microserviceName
+	 * @param @return
+	 * @param @throws Exception 
+	 * @return Object
+	 *
+	 */
+	public static Object executePosthookRule(Object requestObject, String microserviceName) throws Exception{
+		
+		System.out.println("requestObject-->" +requestObject.toString());
+		Gson gson = new Gson();
+		String request =  gson.toJson(requestObject);
+		System.out.println("request (before)-->" +request);
+		request = executeRule(request, microserviceName, RuleConstants.POSTHOOK);
+		System.out.println("request (after)-->" +request);
+		return gson.fromJson(request, (requestObject!=null)?requestObject.getClass():Object.class);
+	}
+	
+	/**
+	 * 
+	 * @param @param ruleParams
+	 * @param @return 
+	 * @return String
+	 * @throws Exception 
+	 *
+	 */
+	public static String executeRule(String request, RuleParams ruleParams) throws Exception{
+		if(!isRulesAvailable(ruleParams))
+			  throw new Exception("No Rules Available for :"+ruleParams.getMsName());
+		  
+		return execute(getQueryString(request, ruleParams));
+	}
+	
+	
+	/**
+	 * 
+	 * @param @param requestObject
+	 * @param @param ruleParams
+	 * @param @return
+	 * @param @throws Exception 
+	 * @return Object
+	 *
+	 */
+	public static Object executeRule(Object requestObject, RuleParams ruleParams) throws Exception{
+		if(!isRulesAvailable(ruleParams))
+			  throw new Exception("No Rules Available for :"+ruleParams.getMsName());
+		 
+		Gson gson = new Gson();
+		String request =  gson.toJson(requestObject);
+		request = execute(getQueryString(request, ruleParams));
+		return gson.fromJson(request, (requestObject!=null)?requestObject.getClass():Object.class);
+
+	}
+	
+	/**
+	 * @param @param ruleParams 
+	 * @return void
+	 *
+	 */
+	private static String getQueryString(String request, RuleParams ruleParams) {
+		
+		  List nameValuePairs = new ArrayList();
+		  if (!RuleUtil.isEmpty(ruleParams.getMsName()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.MS_NAME_PARAM, ruleParams.getMsName()));
+		  if (!RuleUtil.isEmpty(request))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.INPUT_PARAM, request));
+		  if (!RuleUtil.isEmpty(ruleParams.getSortFields()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.SORT_FIELDS, ruleParams.getSortFields()));
+		  if (!RuleUtil.isEmpty(ruleParams.getSortOrder()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.SORT_ORDER, ruleParams.getSortOrder()));
+		  if (!RuleUtil.isEmpty(ruleParams.getSearchField()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.SEARCH_FIELD, ruleParams.getSearchField()));
+		  if (!RuleUtil.isEmpty(ruleParams.getExpression()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.EXPRESSION, ruleParams.getExpression()));
+		  if (!RuleUtil.isEmpty(ruleParams.getSize()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.SIZE, ruleParams.getSize()));
+		  if (!RuleUtil.isEmpty(ruleParams.getHookInd()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.HOOK_IND, ruleParams.getHookInd()));
+		  if (!RuleUtil.isEmpty(ruleParams.getSelectFields()))
+			  nameValuePairs.add(new BasicNameValuePair(RuleConstants.SELECT_FIELDS, ruleParams.getSelectFields()));
+		  String queryString = URLEncodedUtils.format(nameValuePairs, RuleConstants.UTF_8);
+		  return queryString;
+	}
+
+	private static String execute(String queryString) throws ClientProtocolException, IOException{
+	  String url = getServiceURL();
+      DefaultHttpClient client = new DefaultHttpClient();
+	  client.addRequestInterceptor(new RemoveSoapHeadersInterceptor(new ByteArrayInputStream(queryString.getBytes()).available()), 0);
+	  
+      HttpPost httpPost = new HttpPost(url + "?" + queryString);
+		
+      System.out.println("Content-Length 1--->" +httpPost.getFirstHeader("Content-Length"));
+      
+      //httpPost.setHeader("Content-Length", ""+new ByteArrayInputStream(queryString.getBytes()).available());
+      
+      //System.out.println("Content-Length--->" +httpPost.getFirstHeader("Content-Length"));
+      
+      //httpPost.addHeader(HttpHeaders.CONTENT_LENGTH, "");
+      //Header header = new Header();
+      HttpResponse response = client.execute(httpPost);
+      
+	  BufferedReader rd = new BufferedReader (new InputStreamReader(response.getEntity().getContent()));
+	
+	  String line = "";
+	  StringBuilder sb = new StringBuilder();
+	  while ((line = rd.readLine()) != null) {
+	
+		  	sb.append(line);
+		  	
+	  }
+	  return sb.toString();
+	}
+	/**
 	 * Execute rules by calling Rule Invoker microservice
 	 * 
 	 * @param @param request
@@ -178,35 +369,14 @@ public class RuleUtil {
 	 */
 	private static String executeRule(String request, String microserviceName, String hookInd) throws Exception{
 		
-		  if(!isRulesAvailable(microserviceName, hookInd))
+		  if(!isDBRulesAvailable(microserviceName, hookInd))
 			  throw new Exception("No Rules Available for :"+microserviceName);
 		  
-		  HttpClient client = new DefaultHttpClient();
-		
-		  String url = getServiceURL();
+		  RuleParams ruleParams = new RuleParams();
+		  ruleParams.setMsName(microserviceName);
+		  ruleParams.setHookInd(hookInd);
 		  
-		  if (!isEmpty(hookInd) && hookInd.equalsIgnoreCase(RuleConstants.PREHOOK))
-				  url += RuleConstants.PREHOOK_REST;
-		  else
-			  	url += RuleConstants.POSTHOOK_REST;
-	  
-		  List nameValuePairs = new ArrayList(1);
-		  nameValuePairs.add(new BasicNameValuePair(RuleConstants.MS_NAME_PARAM, microserviceName));
-		  nameValuePairs.add(new BasicNameValuePair(RuleConstants.INPUT_PARAM, request));
-		  String paramsString = URLEncodedUtils.format(nameValuePairs, RuleConstants.UTF_8);
-		  HttpGet httpGet = new HttpGet(url + "?" + paramsString);
-          HttpResponse response = client.execute(httpGet);
-		  BufferedReader rd = new BufferedReader (new InputStreamReader(response.getEntity().getContent()));
-		
-		  String line = "";
-		  StringBuilder sb = new StringBuilder();
-		  while ((line = rd.readLine()) != null) {
-		
-			  	sb.append(line);
-			  	
-		  }
-		  request = sb.toString();
-		  return request;
+		  return executeRule(request, ruleParams);
 	
 	}
 
